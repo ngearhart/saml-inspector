@@ -1,5 +1,5 @@
 <template>
-  <HelloWorld />
+  <Inspector />
 </template>
 
 <script setup>
