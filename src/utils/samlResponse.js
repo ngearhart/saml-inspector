@@ -1,3 +1,6 @@
+import * as xmldsigjs from 'xmldsigjs';
+
+
 export default class SamlResponse {
     constructor(xml) {
         this.xml = xml
@@ -42,7 +45,7 @@ export default class SamlResponse {
         return this
     }
 
-    replaceNotOnOrAfter(minutes=5) {
+    replaceNotOnOrAfter(minutes = 5) {
         const dateOnOrAfter = new Date()
         dateOnOrAfter.setTime(dateOnOrAfter.getTime() + (minutes * 60 * 1000))
 
@@ -53,10 +56,15 @@ export default class SamlResponse {
         Array.from(assertion.getElementsByTagName(this.samlTagPrefix + "Conditions")).forEach((element) => {
             element.setAttribute("NotOnOrAfter", dateOnOrAfter.toISOString())
         })
-        
+
         Array.from(assertion.getElementsByTagName(this.samlTagPrefix + "AuthnStatement")).forEach((element) => {
             element.setAttribute("SessionNotOnOrAfter", dateOnOrAfter.toISOString())
         });
+        return this
+    }
+
+    removeOldSignatureBlock() {
+        Array.from(this.rootElement.getElementsByTagName("dsig:Signature")).forEach(e => e.remove())
         return this
     }
 
@@ -65,6 +73,35 @@ export default class SamlResponse {
             .replaceSolicitation(newSolicitationId)
             .replaceResponseIds()
             .replaceNotOnOrAfter()
+        return this
+    }
+
+    async resign(privateKeyPem) {
+        this.removeOldSignatureBlock()
+
+        const privKey = await importPrivateKey(privateKeyPem)
+        const publicKey = await publicKeyFromPrivateKey(privKey)
+
+        // Parse XML document
+        const xml = xmldsigjs.Parse(this.toString());
+
+        // Create signature
+        const signedXml = new xmldsigjs.SignedXml();
+        await signedXml.Sign(
+            {
+                name: "RSASSA-PKCS1-v1_5",
+                saltLength: 32,
+            },
+            privKey,
+            xml,
+            {
+                keyValue: publicKey,
+                references: [{ hash: "SHA-256", transforms: ["enveloped", "c14n"] }]
+            }
+        )
+
+        console.log(signedXml.toString());
+
         return this
     }
 
@@ -82,4 +119,53 @@ function getRandomString(length) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
+}
+
+// From https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey#examples
+function str2ab(str) {
+    const buf = new ArrayBuffer(str.length);
+    const bufView = new Uint8Array(buf);
+    for (let i = 0, strLen = str.length; i < strLen; i++) {
+        bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+}
+
+async function importPrivateKey(pem) {
+    // fetch the part of the PEM string between header and footer
+    const pemHeader = "-----BEGIN PRIVATE KEY-----";
+    const pemFooter = "-----END PRIVATE KEY-----";
+    const pemContents = pem.substring(
+        pemHeader.length,
+        pem.length - pemFooter.length - 1,
+    );
+    // base64 decode the string to get the binary data
+    const binaryDerString = window.atob(pemContents);
+    // convert from a binary string to an ArrayBuffer
+    const binaryDer = str2ab(binaryDerString);
+
+    return window.crypto.subtle.importKey(
+        "pkcs8",
+        binaryDer,
+        {
+            name: "RSA-PSS",
+            hash: "SHA-256",
+        },
+        true,
+        ["sign"],
+    );
+}
+
+// From https://www.putzisan.com/articles/derive-rsa-public-key-from-private-key-web-crypto
+async function publicKeyFromPrivateKey(privateKey) {
+    // Export the private key in JWK format
+    const privateKeyJwk = await crypto.subtle.exportKey("jwk", privateKey);
+    // Extract the modulus and public exponent from the private JWK
+    const { n, e } = privateKeyJwk;
+    // Create a new JWK with the public components
+    const publicKeyJwk = { kty: "RSA", e, n };
+
+    const rsaParams = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
+    // Re-import the public key from our generated public JWK object
+    return crypto.subtle.importKey("jwk", publicKeyJwk, rsaParams, true, ["verify"]);
 }

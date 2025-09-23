@@ -12,6 +12,11 @@
       </v-col>
     </v-row>
     <v-row>
+      <v-col>
+        <v-textarea label="Paste private key" v-model="privKey"></v-textarea>
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="12" md="6">
         <pre>
           <code data-prismjs-copy="Copy" class="language-xml">{{ decoded }}</code>
@@ -40,6 +45,7 @@ import Decoder from '@/utils/decoder';
 import SamlResponse from "@/utils/samlResponse";
 
 const payload = ref("");
+const privKey = ref("");
 const decoded = ref("");
 const impersonated = ref("");
 
@@ -62,6 +68,12 @@ const parsePayload = () => {
     decoded.value = decoder.toString()
     impersonated.value = response.convertToImpersonated("new-id").toString()
     nextTick(() => Prism.highlightAll())
+
+    if (privKey.value) {
+      nextTick(() => {
+        response.resign(privKey.value)
+      })
+    }
   }
 };
 
