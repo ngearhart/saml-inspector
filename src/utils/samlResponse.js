@@ -7,16 +7,6 @@ export default class SamlResponse {
 
         this.rootElement = xml.getElementsByTagName("samlp:Response")[0]
 
-        // TODO: Something is wrong with JavaScript XML Serializer and how it respects the `saml` Namespace
-        // this.rootElement.et
-        // const oldAssertion = this.rootElement.getElementsByTagName("saml:Assertion")[0]
-        // const children = oldAssertion.children
-        // const newAssertion = document.createElement("Assertion")
-        // Array.from(children).forEach(c => newAssertion.appendChild(c))
-        // oldAssertion.replaceWith(newAssertion)
-
-        debugger
-        // TODO: Correct this
         // Some SAML Response implementations put "saml:" before tag names (e.g. Keycloak), some don't (e.g. Entra)
         this.samlTagPrefix = this.rootElement.getElementsByTagName("saml:Assertion").length > 0 ? "saml:" : ""
     }
@@ -47,6 +37,15 @@ export default class SamlResponse {
         this.rootElement.setAttribute("InResponseTo", newSolicitationId)
         Array.from(this.rootElement.getElementsByTagName(this.samlTagPrefix + "SubjectConfirmationData")).forEach((element) => {
             element.setAttribute("InResponseTo", newSolicitationId)
+        });
+
+        return this
+    }
+
+    removeSolicitation() {
+        this.rootElement.removeAttribute("InResponseTo")
+        Array.from(this.rootElement.getElementsByTagName(this.samlTagPrefix + "SubjectConfirmationData")).forEach((element) => {
+            element.removeAttribute("InResponseTo")
         });
 
         return this
@@ -91,10 +90,15 @@ export default class SamlResponse {
     }
 
     convertToImpersonated(newSolicitationId) {
-        // this.replaceIssueInstant()
-            // .replaceSolicitation(newSolicitationId)
-            // .replaceResponseIds()
-            // .replaceNotOnOrAfter()
+        this.replaceIssueInstant()
+            .replaceResponseIds()
+            .replaceNotOnOrAfter()
+            .removeOldSignatureBlock()
+        if (newSolicitationId) {
+            this.replaceSolicitation(newSolicitationId)
+        } else {
+            this.removeSolicitation()
+        }
         return this
     }
 

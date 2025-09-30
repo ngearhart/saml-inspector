@@ -8,11 +8,16 @@
         </template>
 
         <template v-slot:item.2>
-            <p>Head to {{ audience }}, start to login, but do not complete the authentication process. Stop before the Identity Provider (Issuer) responds.</p>
-            <br/>
-            <p>Copy the <code>SAMLRequest</code> out of the request body.</p>
-            <br/>
-            <v-textarea label="Paste SAMLRequest" v-model="samlRequest"></v-textarea>
+            <p>Some Services support IdP-Initiated SSO, which means they do not need a previously solicited request.
+                If you're not sure, leave this enabled for your first try.</p>
+            <v-checkbox label="Use IdP-Initiated SSO" v-model="idpInitiated"></v-checkbox>
+            <div v-if="!idpInitiated">
+                <p>Head to {{ audience }}, start to login, but do not complete the authentication process. Stop before the Identity Provider (Issuer) responds.</p>
+                <br/>
+                <p>Copy the <code>SAMLRequest</code> out of the request body.</p>
+                <br/>
+                <v-textarea label="Paste SAMLRequest" v-model="samlRequest"></v-textarea>
+            </div>
         </template>
 
         <template v-slot:item.3>
@@ -45,6 +50,7 @@ const props = defineProps(['response'])
 const samlRequest = ref("")
 
 const newResponseDecoded = ref("")
+const idpInitiated = shallowRef(false)
 
 const audience = computed(() => {
     var parser = new DOMParser();
@@ -75,13 +81,16 @@ const preparePayload = () => {
     var parser = new DOMParser();
     var xmlDoc = parser.parseFromString(props.response, "text/xml");
     var response = new SamlResponse(xmlDoc);
-    newResponseDecoded.value = response.toString()
 
-    // var samlRequestDecoded = new Decoder(samlRequest.value).uriDecode().base64Decode().inflate().utf8Parse();
-    // var xmlDoc = parser.parseFromString(samlRequestDecoded.toString(), "text/xml");
-    // var newId = xmlDoc.getElementsByTagName("samlp:AuthnRequest")[0].getAttribute("ID")
+    if (!idpInitiated) {
+        var samlRequestDecoded = new Decoder(samlRequest.value).uriDecode().base64Decode().inflate().utf8Parse();
+        var xmlDoc = parser.parseFromString(samlRequestDecoded.toString(), "text/xml");
+        var newId = xmlDoc.getElementsByTagName("samlp:AuthnRequest")[0].getAttribute("ID")
+        newResponseDecoded.value = response.convertToImpersonated(newId).toString()
+    } else {
+        newResponseDecoded.value = response.convertToImpersonated().toString()
+    }
 
-    // newResponseDecoded.value = response.convertToImpersonated(newId).toString()
 }
 
 
