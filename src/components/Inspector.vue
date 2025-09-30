@@ -7,13 +7,34 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col>
-        <v-textarea label="Paste payload" v-model="payload"></v-textarea>
+      <v-col cols="12" md="9">
+        <v-textarea label="Paste payload" v-model="payload" class="h-100"></v-textarea>
       </v-col>
-    </v-row>
-    <v-row>
-      <v-col>
-        <v-textarea label="Paste private key" v-model="privKey"></v-textarea>
+      <v-col cols="12" md="3">
+        <v-container>
+          <v-row>
+            <v-col>
+              <v-checkbox label="Sign Counterfeit Response" v-model="showPrivateKeyRow"></v-checkbox>
+            </v-col>
+          </v-row>
+          <v-row v-if="showPrivateKeyRow">
+            <v-col>
+              <v-textarea label="Paste private key" v-model="privKey"></v-textarea>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col>
+              <v-dialog max-width="700">
+                <template v-slot:activator="{ props: activatorProps }">
+                  <v-btn class="w-100" color="yellow" prepend-icon="mdi-ticket" v-bind="activatorProps">Print Counterfeit Response</v-btn>
+                </template>
+                <template v-slot:default="{ isActive }">
+                  <counterfeit-dialog :response="decoded" />
+                </template>
+              </v-dialog>
+            </v-col>
+          </v-row>
+        </v-container>
       </v-col>
     </v-row>
     <v-row>
@@ -48,10 +69,15 @@ const payload = ref("");
 const privKey = ref("");
 const decoded = ref("");
 const impersonated = ref("");
+const showPrivateKeyRow = shallowRef(false);
 
 watch(payload, () => {
-  parsePayload();
-});
+  parsePayload()
+})
+
+// watch(privKey, () => {
+//   parsePayload()
+// })
 
 const parsePayload = () => {
   if (payload.value.length > 0) {
@@ -60,20 +86,20 @@ const parsePayload = () => {
     var parser = new DOMParser();
     var xmlDoc = parser.parseFromString(decoder.toString(), "text/xml");
 
-    var response = new SamlResponse(xmlDoc);
-    // console.log(response.convertToImpersonated("new-id").xml);
+    // // var response = new SamlResponse(xmlDoc);
+    // // console.log(response.convertToImpersonated("new-id").xml);
 
     window.xmlDoc = xmlDoc
 
     decoded.value = decoder.toString()
-    impersonated.value = response.convertToImpersonated("new-id").toString()
+    // impersonated.value = response.convertToImpersonated("new-id").toString()
     nextTick(() => Prism.highlightAll())
 
-    if (privKey.value) {
-      nextTick(() => {
-        response.resign(privKey.value)
-      })
-    }
+    // if (privKey.value) {
+    //   nextTick(() => {
+    //     response.resign(privKey.value)
+    //   })
+    // }
   }
 };
 

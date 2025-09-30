@@ -7,8 +7,30 @@ export default class SamlResponse {
 
         this.rootElement = xml.getElementsByTagName("samlp:Response")[0]
 
+        // TODO: Something is wrong with JavaScript XML Serializer and how it respects the `saml` Namespace
+        // this.rootElement.et
+        // const oldAssertion = this.rootElement.getElementsByTagName("saml:Assertion")[0]
+        // const children = oldAssertion.children
+        // const newAssertion = document.createElement("Assertion")
+        // Array.from(children).forEach(c => newAssertion.appendChild(c))
+        // oldAssertion.replaceWith(newAssertion)
+
+        debugger
+        // TODO: Correct this
         // Some SAML Response implementations put "saml:" before tag names (e.g. Keycloak), some don't (e.g. Entra)
         this.samlTagPrefix = this.rootElement.getElementsByTagName("saml:Assertion").length > 0 ? "saml:" : ""
+    }
+
+    getDestination() {
+        return this.rootElement.getAttribute("Destination")
+    }
+
+    getAudience() {
+        return this.getAssertionElement().getElementsByTagName(this.samlTagPrefix + "Audience")[0].textContent.trim()
+    }
+
+    getIssuer() {
+        return this.getAssertionElement().getElementsByTagName(this.samlTagPrefix + "Issuer")[0].textContent.trim()
     }
 
     getAssertionElement() {
@@ -69,10 +91,10 @@ export default class SamlResponse {
     }
 
     convertToImpersonated(newSolicitationId) {
-        this.replaceIssueInstant()
-            .replaceSolicitation(newSolicitationId)
-            .replaceResponseIds()
-            .replaceNotOnOrAfter()
+        // this.replaceIssueInstant()
+            // .replaceSolicitation(newSolicitationId)
+            // .replaceResponseIds()
+            // .replaceNotOnOrAfter()
         return this
     }
 

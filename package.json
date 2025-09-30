@@ -10,6 +10,7 @@
     "lint": "eslint . --fix"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.4",
     "@fontsource/roboto": "5.2.7",
     "@mdi/font": "7.4.47",
     "fflate": "^0.8.2",
