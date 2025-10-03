@@ -1,4 +1,5 @@
 import * as xmldsigjs from 'xmldsigjs';
+import { fixChromeXMLSerializerImplementation } from './encoder';
 
 
 export default class SamlResponse {
@@ -87,6 +88,10 @@ export default class SamlResponse {
     removeOldSignatureBlock() {
         Array.from(this.rootElement.getElementsByTagName("dsig:Signature")).forEach(e => e.remove())
         return this
+    }
+
+    toStringWithTagSerializationFix() {
+        return fixChromeXMLSerializerImplementation(this.toString())
     }
 
     convertToImpersonated(newSolicitationId) {

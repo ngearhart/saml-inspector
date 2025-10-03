@@ -2,6 +2,7 @@
 import { inflateSync } from 'fflate';
 
 import xmlFormat from 'xml-formatter';
+import { fixChromeXMLSerializerImplementation } from './encoder';
 
 export default class Decoder {
 
@@ -68,8 +69,37 @@ export default class Decoder {
         }
     }
 
+    fixTagSerialization() {
+        return new Decoder(
+            fixChromeXMLSerializerImplementation(this.input),
+            ["XML Serializer Tag Namespace Fixed", ...this.decodedMethods]
+        )
+    }
+
     toString() {
         return this.input
+    }
+
+    asXmlDoc() {
+        const parser = new DOMParser()
+        const xmlDoc = parser.parseFromString(this.toString(), "text/xml")
+        return xmlDoc
+    }
+
+    isValidXml() {
+        // parseFromString returns an XMLDoc even if there is an error
+        return this.asXmlDoc().getElementsByTagName("parsererror").length == 0
+    }
+
+    getXmlError() {
+        if (!this.isValidXml()) {
+            return this.asXmlDoc().getElementsByTagName("parsererror")[0].textContent
+        }
+        return null
+    }
+
+    isSamlResponse() {
+        return this.isValidXml() && this.asXmlDoc().getElementsByTagName("samlp:Response").length > 0
     }
 
 }
