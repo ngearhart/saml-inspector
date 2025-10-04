@@ -45,12 +45,12 @@ const assertionElementNames = [
  *  if and only if the original assertion element starts with the namespaced tag.
  */
 export function fixChromeXMLSerializerImplementation(plaintextPayload) {
-    if (plaintextPayload.includes("saml:Assertion")) {
-        for (const tag of assertionElementNames) {
-            plaintextPayload = plaintextPayload.replaceAll("<" + tag, "<saml:" + tag)
-            plaintextPayload = plaintextPayload.replaceAll("</" + tag, "</saml:" + tag)
-        }
-    }
+    // if (plaintextPayload.includes("saml:Assertion")) {
+    //     for (const tag of assertionElementNames) {
+    //         plaintextPayload = plaintextPayload.replaceAll("<" + tag, "<saml:" + tag)
+    //         plaintextPayload = plaintextPayload.replaceAll("</" + tag, "</saml:" + tag)
+    //     }
+    // }
     return plaintextPayload
 }
 

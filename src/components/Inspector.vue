@@ -175,8 +175,20 @@ const preparedResponseIsValid = computed(() => {
   return decoder.isSamlResponse()
 })
 
-const preparedResponseEncoded = computed(() => {
-  return encode(preparedResponse.value)
+const preparedResponseEncoded = ref("")
+
+watch(preparedResponse, async () => {
+  if (privKey.value.length > 0) {
+    var parser = new DOMParser()
+    var xmlDoc = parser.parseFromString(preparedResponse.value, "text/xml")
+    var response = new SamlResponse(xmlDoc)
+    const result = await response.resign2(privKey.value)
+    preparedResponseEncoded.value = encode(result.toString())
+    console.log("here:")
+    console.log(result.toString())
+  } else {
+    preparedResponseEncoded.value = encode(preparedResponse.value)
+  }
 })
 
 watch(payload, () => {
@@ -259,6 +271,10 @@ onMounted(() => {
     "spaces-to-tabs": 4*/
   });
   rerenderNextTick()
+
+  window.Buffer = {
+    isBuffer: () => false
+  }
 })
 
 </script>
