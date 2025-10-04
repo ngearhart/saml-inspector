@@ -1,4 +1,3 @@
-import * as xmldsigjs from 'xmldsigjs';
 import { fixChromeXMLSerializerImplementation } from './encoder';
 import { SignedXml } from 'xml-crypto';
 
@@ -111,35 +110,7 @@ export default class SamlResponse {
         return this
     }
 
-    async resign(privateKeyPem) {
-        xmldsigjs.XmlSignature.DefaultPrefix = 'dsig' // 'ds' by default - does not work in some SAML implementations
-        this.removeOldSignatureBlock()
-
-        const privKey = await importPrivateKey(privateKeyPem)
-        const publicKey = await publicKeyFromPrivateKey(privKey)
-
-        // Parse XML document
-        const xml = xmldsigjs.Parse(this.toString());
-
-        // Create signature
-        const signedXml = new xmldsigjs.SignedXml();
-        await signedXml.Sign(
-            {
-                name: "RSASSA-PKCS1-v1_5",
-                saltLength: 32,
-            },
-            privKey,
-            xml,
-            {
-                keyValue: publicKey,
-                references: [{ hash: "SHA-256", transforms: ["enveloped", "exc-c14n"] }]
-            }
-        )
-
-        return signedXml.toString()
-    }
-
-    resign2(privateKeyPem) {
+    resign(privateKeyPem) {
         return new Promise(async (res, rej) => {
             const privKey = await importPrivateKey(privateKeyPem)
             const publicKey = await pemPublicKeyFromPrivateKey(privKey)

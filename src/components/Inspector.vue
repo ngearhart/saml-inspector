@@ -1,5 +1,4 @@
 <template>
-  <!-- <div class="display-flex align-center justify-center h-100"> -->
   <v-container>
     <v-row>
       <v-col class="ma-10">
@@ -28,7 +27,7 @@
               </template>
             </v-stepper-vertical-item>
             <v-stepper-vertical-item :complete="step > 2" subtitle="Optional" title="Enter Private Key" value="2">
-              <v-textarea label="Identity Provider (Issuer) Private Key" v-model="privKey"
+              <v-textarea label="Identity Provider (Issuer) Private Key" v-model="privKey" class="mb-5"
                 hint="Leave blank to create a non-signed payload" persistent-hint></v-textarea>
               <v-alert text="We can use this to sign our counterfeit response."
                 title="Successfully imported private key." type="success" variant="outlined"
@@ -151,8 +150,6 @@ const payload = ref("");
 const privKey = ref("");
 const decoded = ref("Decoded payload will appear here...");
 const decodedMethods = ref("");
-const impersonated = ref("");
-const showPrivateKeyRow = shallowRef(false);
 const payloadIsValidResponse = shallowRef(false);
 const idpInitiated = shallowRef(true)
 const preparedResponse = ref("")
@@ -164,12 +161,12 @@ const audience = computed(() => {
   return response.getAudience();
 })
 
-const issuer = computed(() => {
-  var parser = new DOMParser();
-  var xmlDoc = parser.parseFromString(decoded.value, "text/xml");
-  var response = new SamlResponse(xmlDoc);
-  return response.getIssuer();
-})
+// const issuer = computed(() => {
+//   var parser = new DOMParser();
+//   var xmlDoc = parser.parseFromString(decoded.value, "text/xml");
+//   var response = new SamlResponse(xmlDoc);
+//   return response.getIssuer();
+// })
 
 const destination = computed(() => {
   var parser = new DOMParser();
