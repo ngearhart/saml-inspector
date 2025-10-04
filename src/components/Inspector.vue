@@ -30,6 +30,16 @@
             <v-stepper-vertical-item :complete="step > 2" subtitle="Optional" title="Enter Private Key" value="2">
               <v-textarea label="Identity Provider (Issuer) Private Key" v-model="privKey"
                 hint="Leave blank to create a non-signed payload" persistent-hint></v-textarea>
+              <v-alert text="We can use this to sign our counterfeit response."
+                title="Successfully imported private key." type="success" variant="outlined"
+                v-if="privKey.length > 0 && privKeyIsValid"></v-alert>
+              <v-alert
+                text="Please confirm it is an RSA key, PKCS8 encoded, for signing. For example, generated with openssl genrsa -out keypair.pem 2048."
+                title="This is not a valid private key." type="info" variant="outlined"
+                v-if="privKey.length > 0 && !privKeyIsValid"></v-alert>
+              <template v-slot:next="{ next }">
+                <v-btn color="primary" @click="next" :disabled="privKey.length > 0 && !privKeyIsValid"></v-btn>
+              </template>
             </v-stepper-vertical-item>
             <v-stepper-vertical-item :complete="step > 3" subtitle="Optional" title="Solicit New Login" value="3">
               <p>Some Services support IdP-Initiated SSO, which means they do not need a previously solicited request.
@@ -134,7 +144,7 @@ import "prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard";
 import "prismjs/plugins/normalize-whitespace/prism-normalize-whitespace.min";
 
 import Decoder from '@/utils/decoder';
-import SamlResponse from "@/utils/samlResponse";
+import SamlResponse, { isPrivateKeyValid } from "@/utils/samlResponse";
 import encode from "@/utils/encoder";
 
 const payload = ref("");
@@ -175,6 +185,13 @@ const preparedResponseIsValid = computed(() => {
   return decoder.isSamlResponse()
 })
 
+const privKeyIsValid = shallowRef(false)
+
+watch(privKey, async() => {
+  privKeyIsValid.value = await isPrivateKeyValid(privKey.value)
+})
+
+
 const preparedResponseEncoded = ref("")
 
 watch(preparedResponse, async () => {
@@ -184,8 +201,6 @@ watch(preparedResponse, async () => {
     var response = new SamlResponse(xmlDoc)
     const result = await response.resign2(privKey.value)
     preparedResponseEncoded.value = encode(result.toString())
-    console.log("here:")
-    console.log(result.toString())
   } else {
     preparedResponseEncoded.value = encode(preparedResponse.value)
   }
@@ -195,21 +210,9 @@ watch(payload, () => {
   parsePayload()
 })
 
-// watch(privKey, () => {
-//   parsePayload()
-// })
-
 const parsePayload = () => {
   if (payload.value.length > 0) {
     var decoder = new Decoder(payload.value).uriDecode().base64Decode().inflate().utf8Parse().format();
-
-    // var parser = new DOMParser();
-    // var xmlDoc = parser.parseFromString(decoder.toString(), "text/xml");
-
-    // // var response = new SamlResponse(xmlDoc);
-    // // console.log(response.convertToImpersonated("new-id").xml);
-
-    // window.xmlDoc = xmlDoc
 
     if (decoder.isValidXml()) {
       decoded.value = decoder.toString()
@@ -220,14 +223,7 @@ const parsePayload = () => {
       decodedMethods.value = ""
       payloadIsValidResponse.value = false
     }
-    // impersonated.value = response.convertToImpersonated("new-id").toString()
     rerenderNextTick()
-
-    // if (privKey.value) {
-    //   nextTick(() => {
-    //     response.resign(privKey.value)
-    //   })
-    // }
   } else {
     decoded.value = "Decoded payload will appear here..."
     payloadIsValidResponse.value = false

@@ -136,9 +136,7 @@ export default class SamlResponse {
             }
         )
 
-        console.log(signedXml.toString())//.replaceAll("ds:", "dsig:").replaceAll("xmlns:ds", "xmlns:dsig"));
-
-        return signedXml.toString()//.replaceAll("ds:", "dsig:").replaceAll("xmlns:ds", "xmlns:dsig")
+        return signedXml.toString()
     }
 
     resign2(privateKeyPem) {
@@ -172,8 +170,8 @@ export default class SamlResponse {
                 });
             }
             
-            sig.HashAlgorithms[digestAlgorithm] = MyDigest;
-            sig.SignatureAlgorithms[signatureAlgorithm] = MySignatureAlgorithm;
+            sig.HashAlgorithms[digestAlgorithm] = BrowserCryptoSha256Digest;
+            sig.SignatureAlgorithms[signatureAlgorithm] = BrowserCryptoSha256Signature;
             sig.signatureAlgorithm = signatureAlgorithm;
             sig.publicCert = publicKey.toString()
             sig.privateKey = privateKeyPem
@@ -186,7 +184,6 @@ export default class SamlResponse {
                     rej(error)
                     return
                 }
-                console.log(result.getSignedXml())
                 res(result.getSignedXml());
             });
         })
@@ -204,7 +201,10 @@ function hexToBase64(hexstring) {
     }).join(""));
 }
 
-function MyDigest() {
+/**
+ * Sha-256 Base64 Digest re-implementation based on crypto.subtle instead of node crypto.
+ */
+function BrowserCryptoSha256Digest() {
     this.getHash = function (xml, callback) {
         const ec = new TextEncoder();
         crypto.subtle.digest("SHA-256", ec.encode(xml)).then((result) => {
@@ -221,12 +221,13 @@ function MyDigest() {
     };
 }
 
-function MySignatureAlgorithm() {
-    /*sign the given SignedInfo using the key. return base64 signature value*/
+/**
+ * Sha-256 Base64 Signature re-implementation based on crypto.subtle instead of node crypto.
+ */
+function BrowserCryptoSha256Signature() {
     this.getSignature = function (signedInfo, privateKey, callback) {
         importPrivateKey(privateKey).then(privKeyEncoded => {
             const ec = new TextEncoder();
-            console.log(signedInfo)
             crypto.subtle.sign("RSASSA-PKCS1-v1_5", privKeyEncoded, ec.encode(signedInfo)).then((result) => {
                 const hashArray = Array.from(new Uint8Array(result));
                 const hash = hashArray
@@ -284,12 +285,14 @@ function arrayBufferToString( buffer ) {
 
 async function importPrivateKey(pem) {
     // fetch the part of the PEM string between header and footer
-    // const pemHeader = "-----BEGIN PRIVATE KEY-----";
-    // const pemFooter = "-----END PRIVATE KEY-----";
-    // const pemContents = pem.substring(
-    //     pemHeader.length,
-    //     pem.length - pemFooter.length - 1,
-    // );
+    const pemHeader = "-----BEGIN PRIVATE KEY-----";
+    const pemFooter = "-----END PRIVATE KEY-----";
+    if (pem.includes(pemHeader)) {
+        pem = pem.substring(
+            pemHeader.length,
+            pem.length - pemFooter.length - 1,
+        )
+    }
     // base64 decode the string to get the binary data
     const binaryDerString = window.atob(pem);
     // convert from a binary string to an ArrayBuffer
@@ -345,4 +348,13 @@ function exportKeyAsPem(keydata){
     var keydataB64 = window.btoa(keydataS);
     var keydataB64Pem = formatAsPem(keydataB64);
     return keydataB64Pem;
+}
+
+export async function isPrivateKeyValid(privKeyPem) {
+    try {
+        await importPrivateKey(privKeyPem)
+    } catch {
+        return false
+    }
+    return true
 }
