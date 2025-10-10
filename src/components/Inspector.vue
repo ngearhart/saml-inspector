@@ -196,7 +196,7 @@ watch(preparedResponse, async () => {
     var parser = new DOMParser()
     var xmlDoc = parser.parseFromString(preparedResponse.value, "text/xml")
     var response = new SamlResponse(xmlDoc)
-    const result = await response.resign2(privKey.value)
+    const result = await response.resign(privKey.value)
     preparedResponseEncoded.value = encode(result.toString())
   } else {
     preparedResponseEncoded.value = encode(preparedResponse.value)
